@@ -25,6 +25,18 @@ import plotly.graph_objects as go
 import config
 from database import db
 from preprocessing import preprocessor
+from collector import TelemetryCollector
+import threading
+
+# Tự động khởi chạy bộ thu thập MQTT ngầm ngay trong Web Dashboard
+@st.cache_resource
+def get_live_collector():
+    collector = TelemetryCollector()
+    collector_thread = threading.Thread(target=collector.start, daemon=True)
+    collector_thread.start()
+    return collector
+
+live_collector = get_live_collector()
 
 # ==========================================
 # CẤU HÌNH TRANG STREAMLIT
@@ -92,8 +104,12 @@ with st.sidebar:
     st.markdown(f"**Sinh viên:** Nguyễn Xuân Lộc\n**MSV:** `{config.STUDENT_ID}`\n**Device:** `{config.DEVICE_ID}`")
     st.divider()
 
-    st.subheader("📡 Kết Nối MQTT")
-    st.info(f"**Broker:** `{config.MQTT_BROKER}:{config.MQTT_PORT}`\n\n**Topic:** `{config.MQTT_TOPIC_TELEMETRY}`")
+    st.subheader("📡 Bộ Thu Thập MQTT")
+    st.success("🟢 Collector đang chạy ngầm")
+    st.markdown(f"- **Gói tin nhận từ MQTT:** `{live_collector.received_count}`")
+    st.markdown(f"- **Gói hợp lệ ghi CSDL:** `{live_collector.valid_count}`")
+    st.markdown(f"- **Gói trùng lặp đã chặn:** `{live_collector.duplicate_count}`")
+    st.caption(f"Topic: `{config.MQTT_TOPIC_TELEMETRY}`")
 
     st.subheader("💾 Trạng Thái Lưu Trữ")
     stats = db.get_system_stats()
@@ -104,7 +120,7 @@ with st.sidebar:
         st.markdown(f"- InfluxDB 2.x: ⏸️ Standby (Dùng SQLite Engine)")
 
     st.divider()
-    auto_refresh = st.checkbox("Tự động làm mới (Auto Refresh 4s)", value=False)
+    auto_refresh = st.checkbox("Tự động làm mới (Auto Refresh 3s)", value=True)
     if st.button("🔄 Làm mới dữ liệu tức thì"):
         st.rerun()
 
@@ -473,5 +489,5 @@ with tab_data:
 
 # Tự động refresh nếu được bật
 if auto_refresh:
-    time.sleep(4)
+    time.sleep(3)
     st.rerun()

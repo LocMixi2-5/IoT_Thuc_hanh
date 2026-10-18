@@ -17,12 +17,8 @@ if str(SRC_DIR) not in sys.path:
 # Base Project Root Directory (bai2/)
 BASE_DIR = SRC_DIR.parent
 
-# ==========================================
-# 1. MQTT Configuration
-# ==========================================
-# Sử dụng public broker ổn định cho cả Wokwi và máy tính
-# Có thể đổi sang 'localhost' nếu dùng Mosquitto cục bộ
-MQTT_BROKER = os.getenv("MQTT_BROKER", "broker.emqx.io")
+# Sử dụng broker.hivemq.com (Broker chuẩn tối ưu 100% cho Wokwi simulation)
+MQTT_BROKER = os.getenv("MQTT_BROKER", "broker.hivemq.com")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
 MQTT_KEEPALIVE = 60
 

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # 1. MQTT Broker (Eclipse Mosquitto)
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    container_name: iot_mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - iot_net
+
+  # 2. Time-Series Database (InfluxDB 2.7)
+  influxdb:
+    image: influxdb:2.7
+    container_name: iot_influxdb
+    restart: unless-stopped
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword123
+      - DOCKER_INFLUXDB_INIT_ORG=ptit
+      - DOCKER_INFLUXDB_INIT_BUCKET=sensor_telemetry_raw
+      - DOCKER_INFLUXDB_INIT_RETENTION=7d
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=iot-lab2-token-b23dccn492-super-secret-key
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    networks:
+      - iot_net
+
+  # 3. Visualization Dashboard (Grafana)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: iot_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - influxdb
+    networks:
+      - iot_net
+
+networks:
+  iot_net:
+    driver: bridge
+
+volumes:
+  influxdb_data:
+  grafana_data:

@@ -41,26 +41,24 @@ Dự án này là lời giải hoàn chỉnh cho **Bài thực hành số 2: Thu
 ```text
 bai2/
 │
-├── config.py                 # Cấu hình tập trung (MQTT, DB, ngưỡng kiểm tra, tiền xử lý)
-├── database.py               # Quản lý CSDL Time-Series kép (SQLite Indexing & InfluxDB 2.x)
-├── collector.py              # Dịch vụ thu thập MQTT, validate, dedup, tính latency & ghi DB
-├── preprocessing.py          # Pipeline tiền xử lý (IQR, Z-Score, Interpolation, Feature Engineering)
-├── simulator.py              # Script giả lập ESP32 (hỗ trợ chèn outlier, missing, duplicate để test)
-├── app.py                    # Web Dashboard tương tác giám sát Real-time & Tiền xử lý (Streamlit)
-├── generate_report.py        # Script tự động sinh Báo cáo Word 04-06 trang chuẩn định dạng
+├── src/                      # [MÃ NGUỒN XỬ LÝ DỮ LIỆU IOT]
+│   ├── config.py             # Cấu hình tập trung (MQTT, DB, ngưỡng kiểm tra, tiền xử lý)
+│   ├── database.py           # Quản lý CSDL Time-Series kép (SQLite Indexing & InfluxDB 2.x)
+│   ├── collector.py          # Dịch vụ thu thập MQTT, validate, dedup, tính latency & ghi DB
+│   ├── preprocessing.py      # Pipeline tiền xử lý (IQR, Z-Score, Interpolation, Feature Engineering)
+│   ├── simulator.py          # Script giả lập ESP32 (hỗ trợ chèn outlier, missing, duplicate để test)
+│   ├── app.py                # Web Dashboard tương tác giám sát Real-time & Tiền xử lý (Streamlit)
+│   └── generate_report.py    # Script tự động sinh Báo cáo Word 04-06 trang chuẩn định dạng
 │
-├── firmware/
-│   ├── firmware.ino          # Mã nguồn nạp vi điều khiển ESP32
-│   ├── diagram.json          # Sơ đồ kết nối phần cứng trên Wokwi Simulator
+├── firmware/                 # [MÃ NGUỒN THIẾT BỊ NHÚNG ESP32]
+│   ├── firmware.ino          # Firmware ESP32 nạp chip hoặc chạy mô phỏng Wokwi
+│   ├── diagram.json          # Sơ đồ kết nối phần cứng Wokwi Simulator
 │   └── libraries.txt         # Danh sách thư viện Wokwi
 │
-├── wifi-scan.ino             # File Arduino ở thư mục gốc để Wokwi mở chạy trực tiếp
-├── diagram.json              # File diagram gốc cho Wokwi
+├── iot_timeseries.db         # Cơ sở dữ liệu Time-Series cục bộ (SQLite)
 ├── requirements.txt          # Danh sách thư viện Python cần cài đặt
-├── docker-compose.yml        # (Tùy chọn) Chạy Mosquitto, InfluxDB, Grafana qua Docker
-├── mosquitto.conf            # Cấu hình Mosquitto cho Docker
 ├── README.md                 # Tài liệu hướng dẫn sử dụng chi tiết
-└── Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx # Báo cáo thực hành hoàn chỉnh
+└── Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx # Báo cáo thực hành hoàn chỉnh (04-06 trang)
 ```
 
 ---
@@ -76,28 +74,28 @@ pip install -r requirements.txt
 ### Bước 2: Khởi động bộ thu thập dữ liệu (Collector)
 Chạy script lắng nghe và thu thập dữ liệu từ MQTT Broker:
 ```bash
-python collector.py
+python src/collector.py
 ```
 *Collector sẽ kết nối tới MQTT Broker (`broker.emqx.io:1883`), tự động khởi tạo bảng Time-Series trong CSDL và chờ dữ liệu.*
 
 ### Bước 3: Phát dữ liệu cảm biến (Chọn 1 trong 2 cách)
 
 #### Cách 3A: Chạy bằng Wokwi Simulator
-- Mở liên kết Wokwi của bạn hoặc tải thư mục này lên [Wokwi.com](https://wokwi.com).
-- File code `wifi-scan.ino` và sơ đồ `diagram.json` đã được cấu hình sẵn.
+- Mở liên kết Wokwi của bạn hoặc tải thư mục `firmware/` lên [Wokwi.com](https://wokwi.com).
+- File code `firmware.ino` và sơ đồ `diagram.json` đã được cấu hình sẵn.
 - Nhấn nút **Play** (Simulation). ESP32 sẽ kết nối WiFi ảo, đồng bộ giờ NTP và bắt đầu publish dữ liệu mỗi 4 giây lên MQTT.
 
 #### Cách 3B: Chạy bằng Simulator Python (Khuyên dùng khi muốn kiểm thử nhanh)
 Mở một cửa sổ terminal mới và chạy:
 ```bash
 # Gửi dữ liệu mô phỏng liên tục kèm 10% ngoại lai và 5% mất gói để test:
-python simulator.py --interval 3.0 --anomaly 0.10 --loss 0.05
+python src/simulator.py --interval 3.0 --anomaly 0.10 --loss 0.05
 ```
 
 ### Bước 4: Khởi chạy Web Dashboard giám sát
 Mở terminal thứ 3 và chạy lệnh:
 ```bash
-streamlit run app.py
+streamlit run src/app.py
 ```
 Trình duyệt sẽ tự động mở địa chỉ: `http://localhost:8501`.
 Giao diện bao gồm 4 Tab chính:
@@ -109,13 +107,13 @@ Giao diện bao gồm 4 Tab chính:
 ### Bước 5: Thực thi tiền xử lý độc lập (Tùy chọn)
 Nếu muốn chạy riêng script tiền xử lý từ dòng lệnh:
 ```bash
-python preprocessing.py
+python src/preprocessing.py
 ```
 
 ### Bước 6: Tạo file Báo cáo Word (.docx)
 Để xuất ra file báo cáo 04-06 trang hoàn chỉnh:
 ```bash
-python generate_report.py
+python src/generate_report.py
 ```
 File báo cáo `Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx` sẽ được tạo ra tại thư mục gốc.
 
@@ -136,18 +134,7 @@ File báo cáo `Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx` sẽ được tạo ra 
 
 ---
 
-## 🐳 5. Triển khai Docker (Tùy chọn nâng cao)
-Nếu máy bạn có cài đặt Docker Desktop, bạn có thể triển khai hệ thống phân tán với Mosquitto, InfluxDB 2.7 và Grafana chỉ với một lệnh:
-```bash
-docker compose up -d
-```
-- InfluxDB UI: `http://localhost:8086` (User: `admin` / Password: `adminpassword123`)
-- Grafana UI: `http://localhost:3000` (User: `admin` / Password: `admin`)
-- MQTT Mosquitto: `localhost:1883`
-
----
-
-## 🏆 6. Tác giả & Bản quyền
+## 🏆 5. Tác giả & Bản quyền
 * **Sinh viên:** Nguyễn Xuân Lộc
 * **Mã sinh viên:** B23DCCN492
 * **Khoa:** Công nghệ Thông tin - Học viện Công nghệ Bưu chính Viễn thông (PTIT)

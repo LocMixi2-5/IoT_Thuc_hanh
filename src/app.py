@@ -5,14 +5,22 @@ Học phần: IoT và Ứng dụng (INT14149)
 Sinh viên: Nguyễn Xuân Lộc - B23DCCN492
 """
 
+import os
+import sys
+import time
+from pathlib import Path
+from datetime import datetime, timedelta
+
+# Ensure src/ is in sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
-import os
-import time
 
 import config
 from database import db
@@ -438,7 +446,7 @@ with tab_data:
         if st.button("📝 Tạo File Báo Cáo Word (.docx) Ngay"):
             import subprocess
             res = subprocess.run([
-                "python", str(config.BASE_DIR / "generate_report.py")
+                sys.executable, str(config.SRC_DIR / "generate_report.py")
             ], capture_output=True, text=True)
             if res.returncode == 0:
                 st.success("✅ Đã tạo thành công file báo cáo Word!")

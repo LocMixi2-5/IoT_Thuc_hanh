@@ -11,6 +11,11 @@ import os
 import sys
 from pathlib import Path
 
+# Ensure src/ is in sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 # Ensure UTF-8 output on Windows terminals
 if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -393,9 +398,17 @@ def generate_word_report(output_filename: str = "Bao_cao_Bai_thuc_hanh_2_B23DCCN
 
     # Lưu tài liệu
     output_path = config.BASE_DIR / output_filename
-    doc.save(str(output_path))
-    print(f"Đã tạo thành công file báo cáo Word: {output_path}")
-    return str(output_path)
+    try:
+        doc.save(str(output_path))
+        print(f"Đã tạo thành công file báo cáo Word: {output_path}")
+        return str(output_path)
+    except PermissionError:
+        fallback_name = output_path.stem + "_new.docx"
+        fallback_path = config.BASE_DIR / fallback_name
+        doc.save(str(fallback_path))
+        print(f"[LƯU Ý] File {output_filename} đang được mở trong Microsoft Word.")
+        print(f"Bản mới đã được lưu thành: {fallback_path}")
+        return str(fallback_path)
 
 
 if __name__ == "__main__":

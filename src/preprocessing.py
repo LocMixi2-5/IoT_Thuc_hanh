@@ -14,7 +14,19 @@ Nhiệm vụ:
 """
 
 import logging
+import sys
+from pathlib import Path
 from typing import Dict, Any, Optional, Tuple
+
+# Ensure src/ is in sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+# Ensure UTF-8 output on Windows terminals
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler, StandardScaler

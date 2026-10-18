@@ -6,10 +6,16 @@ Sinh viên: Nguyễn Xuân Lộc - B23DCCN492
 """
 
 import os
+import sys
 from pathlib import Path
 
-# Base Directory
-BASE_DIR = Path(__file__).resolve().parent
+# Ensure src/ is in sys.path regardless of execution directory
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+# Base Project Root Directory (bai2/)
+BASE_DIR = SRC_DIR.parent
 
 # ==========================================
 # 1. MQTT Configuration

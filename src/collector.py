@@ -15,7 +15,18 @@ import json
 import time
 import sys
 import logging
+from pathlib import Path
 from typing import Dict, Any, Optional
+
+# Ensure src/ is in sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+# Ensure UTF-8 output on Windows terminals
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import paho.mqtt.client as mqtt
 
 import config

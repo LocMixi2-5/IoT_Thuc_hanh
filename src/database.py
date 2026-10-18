@@ -9,7 +9,15 @@ Sinh viên: Nguyễn Xuân Lộc - B23DCCN492
 import sqlite3
 import datetime
 import logging
+import sys
+from pathlib import Path
 from typing import Dict, Any, List, Optional
+
+# Ensure src/ is in sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 import pandas as pd
 import config
 

@@ -13,6 +13,18 @@ import math
 import random
 import argparse
 import logging
+import sys
+from pathlib import Path
+
+# Ensure src/ is in sys.path
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+# Ensure UTF-8 output on Windows terminals
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import paho.mqtt.client as mqtt
 
 import config

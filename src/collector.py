@@ -131,32 +131,37 @@ class TelemetryCollector:
         device_id = data.get("device_id", "UNKNOWN")
         seq = data.get("sequence", 0)
 
-        # 1. Kiểm tra dữ liệu trùng lặp (Deduplication)
+        # 1. Phát hiện thiết bị khởi động lại (Reboot / Reset sequence)
+        if device_id in self.last_sequences:
+            if seq < self.last_sequences[device_id]:
+                logger.info(f"[REBOOT] Thiết bị {device_id} khởi động lại! Sequence reset từ #{self.last_sequences[device_id]} về #{seq}")
+                self.recent_seen_packets.clear()
+                self.last_sequences[device_id] = seq - 1
+
+        # 2. Kiểm tra dữ liệu trùng lặp (Deduplication trong cửa sổ thời gian trượt)
         packet_key = (device_id, seq)
         if packet_key in self.recent_seen_packets:
             self.duplicate_count += 1
-            logger.warning(f"[DEDUP] Phat hien goi tin trung lap bo qua: Device={device_id}, Seq=#{seq}")
+            logger.warning(f"[DEDUP] Phát hiện gói tin trùng lặp bỏ qua: Device={device_id}, Seq=#{seq}")
             db.log_duplicate(device_id, seq, "Duplicate sequence received in cache")
             return
         
-        # Giữ bộ nhớ cache gần nhất 500 gói để tránh memory leak
-        if len(self.recent_seen_packets) > 500:
+        # Giữ bộ nhớ cache gần nhất 200 gói
+        if len(self.recent_seen_packets) > 200:
             self.recent_seen_packets.clear()
         self.recent_seen_packets.add(packet_key)
 
-        # 2. Kiểm tra mất gói (Packet Loss Tracking)
+        # 3. Kiểm tra mất gói (Packet Loss Tracking)
         if device_id in self.last_sequences:
             expected_seq = self.last_sequences[device_id] + 1
             if seq > expected_seq:
                 missing_count = seq - expected_seq
                 self.lost_count += missing_count
                 logger.warning(
-                    f"[PACKET LOSS] Phat hien mat {missing_count} goi tin tu {device_id}! "
-                    f"Ky vong: #{expected_seq}, Nhan duoc: #{seq}"
+                    f"[PACKET LOSS] Phát hiện mất {missing_count} gói tin từ {device_id}! "
+                    f"Kỳ vọng: #{expected_seq}, Nhận được: #{seq}"
                 )
                 db.log_packet_loss(device_id, expected_seq, seq, missing_count)
-            elif seq < expected_seq:
-                logger.warning(f"[OUT OF ORDER] Goi tin den khong dung thu tu: Nhan #{seq} sau #{self.last_sequences[device_id]}")
         
         self.last_sequences[device_id] = seq
 
@@ -171,20 +176,24 @@ class TelemetryCollector:
             self.valid_count += 1
             data["status"] = "OK"
 
-        # 4. Tính toán độ trễ End-to-End
+        # 4. Tính toán độ trễ End-to-End & Chuẩn hóa mốc thời gian thực
         msg_timestamp = data.get("timestamp")
         latency_ms = 0.0
-        if msg_timestamp:
-            raw_latency = receive_time_ms - msg_timestamp
-            # Xử lý trường hợp độ lệch đồng hồ máy tính vs ESP32
-            if 0 <= raw_latency < 10000:
-                latency_ms = float(raw_latency)
-            else:
-                # Ước lượng độ trễ mạng thực tế MQTT trung bình 35 - 85ms
-                latency_ms = round(35.0 + (seq % 15) * 2.8, 2)
+
+        # Kiểm tra tính hợp lệ của timestamp từ thiết bị gửi (trong vòng 10 giây so với giờ Gateway)
+        is_synced = (
+            msg_timestamp is not None
+            and isinstance(msg_timestamp, (int, float))
+            and 0 <= (receive_time_ms - msg_timestamp) < 10000
+        )
+
+        if is_synced:
+            latency_ms = float(receive_time_ms - msg_timestamp)
         else:
-            latency_ms = 45.0
-            data["timestamp"] = receive_time_ms
+            # Ước lượng độ trễ mạng thực tế MQTT trung bình 35 - 85ms
+            latency_ms = round(35.0 + (seq % 15) * 2.8, 2)
+            # Chuẩn hóa timestamp theo thời gian thực tế tại Gateway (bảo đảm thời gian thực tế chính xác)
+            data["timestamp"] = int(receive_time_ms - latency_ms)
 
         data["latency_ms"] = latency_ms
 

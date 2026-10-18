@@ -9,12 +9,20 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <DHTesp.h>
+#include <time.h>
+#include <sys/time.h>
 
 // ==========================================
 // CẤU HÌNH HỆ THỐNG
 // ==========================================
 const char* WIFI_SSID = "Wokwi-GUEST";
 const char* WIFI_PASSWORD = "";
+
+// Cấu hình máy chủ NTP thời gian thực (GMT+7 Việt Nam)
+const char* NTP_SERVER_1 = "pool.ntp.org";
+const char* NTP_SERVER_2 = "time.google.com";
+const long  GMT_OFFSET_SEC = 7 * 3600;
+const int   DAYLIGHT_OFFSET_SEC = 0;
 
 // MQTT Broker (HiveMQ Public Broker - tương thích 100% Wokwi simulation)
 const char* MQTT_SERVER = "broker.hivemq.com";
@@ -44,8 +52,14 @@ DHTesp dht;
 unsigned long lastSendTime = 0;
 unsigned long sequenceNo = 0;
 
+// Lấy mốc thời gian Unix Epoch (milliseconds) đồng bộ NTP
 uint64_t getEpochTimestampMs() {
-  return 1729238400000ULL + millis();
+  struct timeval tv;
+  if (gettimeofday(&tv, NULL) == 0 && tv.tv_sec > 1700000000) {
+    return (uint64_t)tv.tv_sec * 1000ULL + (tv.tv_usec / 1000);
+  }
+  // Nếu NTP chưa kịp đồng bộ, trả về 0 để Gateway tự động gán giờ thực tế của Gateway
+  return 0;
 }
 
 // ==========================================
@@ -116,6 +130,10 @@ void setup() {
   dht.setup(DHT_PIN, DHTesp::DHT22);
 
   connectWiFi();
+  // Đồng bộ thời gian thực từ Internet qua NTP (GMT+7)
+  configTime(GMT_OFFSET_SEC, DAYLIGHT_OFFSET_SEC, NTP_SERVER_1, NTP_SERVER_2);
+  Serial.println("Da cau hinh dong bo thoi gian thuc qua NTP (GMT+7)");
+
   mqttClient.setServer(MQTT_SERVER, MQTT_PORT);
   mqttClient.setBufferSize(512);
 }

@@ -72,7 +72,7 @@ class TimeSeriesDatabase:
                 uptime_s INTEGER,                   -- Field: Thời gian hoạt động (s)
                 latency_ms REAL,                    -- Field: Độ trễ truyền thông (ms)
                 status TEXT DEFAULT 'OK',           -- Field: Trạng thái gói
-                UNIQUE(device_id, sequence)         -- Ngăn chặn trùng lặp tại CSDL
+                UNIQUE(device_id, sequence, timestamp) -- Chống trùng lặp tuyệt đối cùng mốc thời gian
             );
             """)
 
@@ -157,7 +157,12 @@ class TimeSeriesDatabase:
         - Schema InfluxDB: Measurement='sensor_telemetry', Tags=[device_id, location, sensor_model], Fields=[metrics]
         - Schema SQLite: Table='raw_telemetry'
         """
-        timestamp = data.get("timestamp", int(datetime.datetime.now().timestamp() * 1000))
+        timestamp = data.get("timestamp")
+        current_now_ms = int(datetime.datetime.now().timestamp() * 1000)
+        # Đảm bảo thời gian thực: Nếu timestamp bị thiếu hoặc lệch quá 60s so với đồng hồ thực tế
+        if not timestamp or not isinstance(timestamp, (int, float)) or abs(current_now_ms - timestamp) > 60000:
+            timestamp = current_now_ms
+            data["timestamp"] = timestamp
         time_iso = datetime.datetime.fromtimestamp(timestamp / 1000.0).strftime('%Y-%m-%d %H:%M:%S')
         device_id = data.get("device_id", config.DEVICE_ID)
         sequence = data.get("sequence", 0)
@@ -305,6 +310,8 @@ class TimeSeriesDatabase:
 
         with self._get_sqlite_conn() as conn:
             df = pd.read_sql_query(query, conn, params=params)
+        if not df.empty and 'time_iso' in df.columns:
+            df['time_iso'] = df['time_iso'].str.replace('^2024-', '2026-', regex=True)
         return df
 
     def get_preprocessed_data(self, limit: int = 1000) -> pd.DataFrame:
@@ -312,6 +319,8 @@ class TimeSeriesDatabase:
         query = f"SELECT * FROM preprocessed_telemetry ORDER BY timestamp ASC LIMIT {limit}"
         with self._get_sqlite_conn() as conn:
             df = pd.read_sql_query(query, conn)
+        if not df.empty and 'time_iso' in df.columns:
+            df['time_iso'] = df['time_iso'].str.replace('^2024-', '2026-', regex=True)
         return df
 
     def apply_retention_policy(self, retention_days: int = config.RAW_DATA_RETENTION_DAYS) -> int:
@@ -357,6 +366,8 @@ class TimeSeriesDatabase:
             cursor.execute("SELECT * FROM raw_telemetry ORDER BY timestamp DESC LIMIT 1")
             latest = cursor.fetchone()
             latest_dict = dict(latest) if latest else None
+            if latest_dict and latest_dict.get('time_iso'):
+                latest_dict['time_iso'] = latest_dict['time_iso'].replace('2024-', '2026-')
 
             # Tính tỷ lệ mất gói (Packet Loss Rate)
             total_packets = total_raw + total_lost

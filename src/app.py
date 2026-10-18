@@ -48,7 +48,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS cho giao diện hiện đại, chuyên nghiệp
+# Custom CSS cho giao diện hiện đại, chuyên nghiệp, tương thích Dark/Light Mode
 st.markdown("""
 <style>
     .main-header {
@@ -57,40 +57,85 @@ st.markdown("""
         border-radius: 12px;
         color: white;
         margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
     }
-    .metric-card {
-        background: #ffffff;
+    
+    /* Top Metric Cards Styling */
+    div[data-testid="stMetric"] {
+        background: var(--secondary-background-color, rgba(255, 255, 255, 0.05));
+        border: 1px solid rgba(128, 128, 128, 0.2);
         border-radius: 10px;
-        padding: 15px;
-        border-left: 5px solid #2a5298;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 12px 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .metric-title {
-        font-size: 0.85rem;
-        color: #666;
-        text-transform: uppercase;
-        font-weight: 600;
+    div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 14px rgba(42, 82, 152, 0.25);
+        border-color: #3b82f6;
     }
-    .metric-value {
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #1e3c72;
-    }
+
+    /* Tabs Navigation Styling - Khắc phục triệt để lỗi nền trắng chữ trắng */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
+        background-color: transparent;
+        padding-bottom: 4px;
+        border-bottom: 2px solid rgba(128, 128, 128, 0.2);
     }
     .stTabs [data-baseweb="tab"] {
-        height: 50px;
+        height: 48px;
         white-space: pre-wrap;
-        background-color: #f8f9fa;
+        background-color: var(--secondary-background-color, #1e2638) !important;
+        border: 1px solid rgba(128, 128, 128, 0.25) !important;
+        border-bottom: none !important;
         border-radius: 8px 8px 0px 0px;
-        padding: 10px 20px;
+        padding: 8px 20px;
         font-weight: 600;
+        color: var(--text-color, #e0e0e0) !important;
+        transition: all 0.2s ease-in-out;
     }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(42, 82, 152, 0.25) !important;
+        border-color: #3b82f6 !important;
+        color: #ffffff !important;
+    }
+    /* Đảm bảo text và icon bên trong tab luôn có độ tương phản cao, rõ nét */
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div {
+        color: inherit !important;
+        font-weight: 600 !important;
+    }
+    /* Tab đang chọn (Active) */
     .stTabs [aria-selected="true"] {
-        background-color: #2a5298 !important;
-        color: white !important;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%) !important;
+        border: 1px solid #3b82f6 !important;
+        border-bottom: none !important;
+        border-radius: 8px 8px 0px 0px;
+        color: #ffffff !important;
+        box-shadow: 0 4px 12px rgba(42, 82, 152, 0.35);
+    }
+    .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span,
+    .stTabs [aria-selected="true"] div {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+    }
+    /* Thanh highlight chỉ báo gạch chân */
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #3b82f6 !important;
+        height: 3px !important;
+        border-radius: 2px;
+    }
+    .stTabs [data-baseweb="tab-border"] {
+        display: none !important;
+    }
+    
+    /* Expander & Controls */
+    div[data-testid="stExpander"] {
+        border: 1px solid rgba(128, 128, 128, 0.2);
+        border-radius: 10px;
+        background-color: var(--secondary-background-color, transparent);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -185,7 +230,7 @@ tab_realtime, tab_prep, tab_qos, tab_data = st.tabs([
     "📈 Giám Sát Thời Gian Thực",
     "🔬 Phòng Thí Nghiệm Tiền Xử Lý",
     "⚡ Độ Trễ & Hiệu Năng Hệ Thống",
-    "📑 Dữ Liệu & Báo Cáo"
+    "📑 Dữ Liệu CSDL"
 ])
 
 # ----------------------------------------------------
@@ -347,7 +392,7 @@ with tab_prep:
         fcol1, fcol2 = st.columns(2)
         with fcol1:
             fig_feat = go.Figure()
-            fig_feat.add_trace(go.Scatter(x=df_prep['time_iso'], y=df_prep['temperature_clean'], mode='lines', name='T_clean', line=dict(color='#34495e', width=1.5)))
+            fig_feat.add_trace(go.Scatter(x=df_prep['time_iso'], y=df_prep['temperature_clean'], mode='lines', name='T_clean', line=dict(color='#3498db', width=2)))
             fig_feat.add_trace(go.Scatter(x=df_prep['time_iso'], y=df_prep['temp_rolling_mean'], mode='lines', name='Rolling Mean (k=5)', line=dict(color='#e67e22', width=2.5)))
             fig_feat.update_layout(title="Xu hướng trung bình trượt (Rolling Mean 5 mẫu)", height=350, margin=dict(l=20, r=20, t=40, b=20))
             st.plotly_chart(fig_feat, use_container_width=True)
@@ -364,6 +409,8 @@ with tab_prep:
         resample_rule = st.radio("Chọn khung thời gian Resampling:", ["30s", "1min", "5min"], horizontal=True)
         df_resampled = preprocessor.resample_data(df_raw, interval=resample_rule)
         st.dataframe(df_resampled.head(10), use_container_width=True)
+    else:
+        st.info("ℹ️ Chưa có dữ liệu thô trong CSDL để tiền xử lý. Hãy khởi động `collector.py` và `simulator.py` (hoặc Wokwi ESP32) để thu thập dữ liệu!")
 
 # ----------------------------------------------------
 # TAB 3: ĐỘ TRỄ & HIỆU NĂNG HỆ THỐNG (QOS)
@@ -426,57 +473,39 @@ with tab_qos:
         st.table(pd.DataFrame(qos_data))
 
 # ----------------------------------------------------
-# TAB 4: QUẢN LÝ CSDL & BÁO CÁO
+# TAB 4: QUẢN LÝ & XUẤT DỮ LIỆU CSDL
 # ----------------------------------------------------
 with tab_data:
-    st.subheader("📑 Quản Lý Dữ Liệu Time-Series & Xuất Báo Cáo")
+    st.subheader("📑 Quản Lý & Xuất Dữ Liệu Time-Series")
 
-    tcol1, tcol2 = st.columns(2)
-    with tcol1:
-        st.markdown("#### 📥 Xuất Dữ Liệu Ra File")
+    st.markdown("#### 📥 Xuất Dữ Liệu Ra File CSV")
+    dcol1, dcol2 = st.columns(2)
+    with dcol1:
         if not df_raw.empty:
             csv_raw = df_raw.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="⬇️ Tải Dữ Liệu Thô (CSV)",
+                label="⬇️ Tải Dữ Liệu Thô (raw_sensor_telemetry.csv)",
                 data=csv_raw,
                 file_name="raw_sensor_telemetry.csv",
-                mime="text/csv"
+                mime="text/csv",
+                use_container_width=True
             )
+        else:
+            st.info("Chưa có dữ liệu thô để tải về.")
 
+    with dcol2:
         df_p_data = db.get_preprocessed_data(limit=1000)
         if not df_p_data.empty:
             csv_prep = df_p_data.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="⬇️ Tải Dữ Liệu Đã Tiền Xử Lý (CSV)",
+                label="⬇️ Tải Dữ Liệu Đã Tiền Xử Lý (preprocessed_telemetry.csv)",
                 data=csv_prep,
                 file_name="preprocessed_sensor_telemetry.csv",
-                mime="text/csv"
+                mime="text/csv",
+                use_container_width=True
             )
-
-    with tcol2:
-        st.markdown("#### 📄 Báo Cáo Thực Hành Số 2 (.docx)")
-        st.info("Nhấn nút bên dưới để tự động tạo báo cáo Word 04-06 trang hoàn chỉnh theo đúng yêu cầu đề bài!")
-        
-        report_file_path = config.BASE_DIR / "Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx"
-        
-        if st.button("📝 Tạo File Báo Cáo Word (.docx) Ngay"):
-            import subprocess
-            res = subprocess.run([
-                sys.executable, str(config.SRC_DIR / "generate_report.py")
-            ], capture_output=True, text=True)
-            if res.returncode == 0:
-                st.success("✅ Đã tạo thành công file báo cáo Word!")
-            else:
-                st.error(f"Lỗi tạo báo cáo: {res.stderr}")
-
-        if os.path.exists(report_file_path):
-            with open(report_file_path, "rb") as f:
-                st.download_button(
-                    label="📥 Tải Báo Cáo Word (Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx)",
-                    data=f.read(),
-                    file_name="Bao_cao_Bai_thuc_hanh_2_B23DCCN492.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
+        else:
+            st.info("Chưa có dữ liệu tiền xử lý để tải về.")
 
     st.divider()
     st.markdown("#### 🔍 Xem Trực Tiếp Dữ Liệu Trong CSDL")
